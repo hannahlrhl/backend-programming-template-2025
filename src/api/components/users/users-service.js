@@ -1,35 +1,36 @@
-const usersRepository = require('./users-repository');
+const express = require('express');
+const usersController = require('./controllers/users-controller');
+const db = require('../../../models');
+const { Users } = db;
 
-async function getUsers() {
-  return usersRepository.getUsers();
-}
+const router = express.Router();
 
-async function getUser(id) {
-  return usersRepository.getUser(id);
-}
+module.exports = (app) => {
+  app.use('/users', router);
 
-async function emailExists(email) {
-  const user = await usersRepository.getUserByEmail(email);
-  return !!user; // Return true if user exists, false otherwise
-}
+  router.get('/', usersController.getUsers);
 
-async function createUser(email, password, fullName) {
-  return usersRepository.createUser(email, password, fullName);
-}
+  router.post('/', usersController.createUser);
 
-async function updateUser(id, email, fullName) {
-  return usersRepository.updateUser(id, email, fullName);
-}
+  router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
 
-async function deleteUser(id) {
-  return usersRepository.deleteUser(id);
-}
+    try {
+      const user = await Users.findOne({ where: { email } });
+      if (!user || user.password !== password) {
+        return res.status(403).json({ message: 'INVALID_PASSWORD' });
+      }
+      res.json({ message: 'Success' });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  });
 
-module.exports = {
-  getUsers,
-  getUser,
-  emailExists,
-  createUser,
-  updateUser,
-  deleteUser,
+  router.get('/:id', usersController.getUser);
+
+  router.put('/:id', usersController.updateUser);
+
+  router.put('/:id/change-password', usersController.changePassword);
+
+  router.delete('/:id', usersController.deleteUser);
 };
